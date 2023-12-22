@@ -4,13 +4,9 @@ import android.util.Log
 import com.example.accessibilityverifier.Constants
 import com.example.accessibilityverifier.models.Results
 import com.example.accessibilityverifier.models.SaveTestRequest
-import com.google.gson.GsonBuilder
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import java.io.DataOutputStream
-import java.net.HttpURLConnection
-import java.net.URL
 
 
 object Repository {

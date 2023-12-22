@@ -29,7 +29,6 @@ class ScreenshotService : Service() {
 
     lateinit var mediaProjectionManager: MediaProjectionManager
     var mediaProjection: MediaProjection? = null
-    //lateinit var projectorCallback : MediaProjection.Callback
 
     override fun onCreate() {
         super.onCreate()

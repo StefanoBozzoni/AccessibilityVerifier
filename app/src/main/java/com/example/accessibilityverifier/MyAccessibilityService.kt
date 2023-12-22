@@ -13,6 +13,7 @@ import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.os.Build.VERSION
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES
 import android.os.Handler
@@ -27,9 +28,12 @@ import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.webkit.PermissionRequest
 import android.widget.Button
 import android.widget.FrameLayout
 import androidx.annotation.RequiresApi
+import androidx.core.app.ActivityCompat
+import androidx.core.app.ActivityCompat.requestPermissions
 import com.example.accessibilityverifier.ScreenshotService.Companion.ACTION_SCREENSHOT
 import com.example.accessibilityverifier.ScreenshotService.Companion.ACTION_STOP
 import com.example.accessibilityverifier.axemodels.AxeScanner
@@ -189,6 +193,10 @@ class MyAccessibilityService : AccessibilityService() {
         }
 
         btnScreenShot?.setOnClickListener {
+            if (SDK_INT>=30) {
+                takeScreenshot()
+            }
+            /*
             mLayout?.visibility = View.GONE
             if (MediaProjectionHolder.get() == null) {
                 val intent = Intent(this, ScreenshotService::class.java)
@@ -200,6 +208,7 @@ class MyAccessibilityService : AccessibilityService() {
                     ScreenshotService.imageProcessed = false
                     }, 40)
             }
+             */
         }
 
     }
@@ -291,6 +300,8 @@ class MyAccessibilityService : AccessibilityService() {
 
     @RequiresApi(VERSION_CODES.R)
     fun takeScreenshot() {
+
+        mLayout?.visibility = View.GONE
         takeScreenshot(
             Display.DEFAULT_DISPLAY,
             applicationContext.mainExecutor,
@@ -307,13 +318,16 @@ class MyAccessibilityService : AccessibilityService() {
                         bitmap?.compress(Bitmap.CompressFormat.PNG, 100, out)
                         out.flush()
                         out.close()
+                        Log.d("XDEBUG", "bitmap saved")
+                        mLayout?.visibility = View.VISIBLE
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
                 }
 
                 override fun onFailure(errorCode: Int) {
-                    TODO("Not yet implemented")
+                    Log.d("XDEBUG", "failed on takeScreenshot, errorcode: $errorCode")
+                    mLayout?.visibility = View.VISIBLE
                 }
             }
         )
