@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">AccessibilityVerifier</string>
+    <string name="power">Power</string>
+    <string name="scanstr">Scan</string>
+    <string name="snapshotstr">Snapshot</string>
+
+</resources>
