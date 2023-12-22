@@ -9,7 +9,6 @@ import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
-import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
@@ -17,17 +16,13 @@ import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
-import android.util.DisplayMetrics
 import android.util.Log
-import android.view.Display
-import android.view.PixelCopy
-import android.view.Surface
 import android.view.WindowManager
 import androidx.core.app.NotificationCompat
+import com.example.accessibilityverifier.axemodels.MediaProjectionHolder
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.lang.reflect.Modifier.NATIVE
 
 
 class ScreenshotService : Service() {

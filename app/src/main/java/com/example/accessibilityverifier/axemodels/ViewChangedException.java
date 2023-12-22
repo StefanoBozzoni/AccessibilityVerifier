@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-package com.example.accessibilityverifier;
+package com.example.accessibilityverifier.axemodels;
 
 class ViewChangedException extends Exception {
   public ViewChangedException() {

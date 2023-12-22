@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-package com.example.accessibilityverifier;
+package com.example.accessibilityverifier.axemodels;
 
 import android.graphics.Bitmap;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -9,6 +9,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import com.deque.axe.android.Axe;
 import com.deque.axe.android.AxeContext;
 import com.deque.axe.android.AxeResult;
+
 
 public class AxeScanner {
   private final AxeRunnerFactory axeRunnerFactory;

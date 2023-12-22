@@ -3,7 +3,6 @@ package com.example.accessibilityverifier
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.animation.Animator
-import android.animation.Animator.AnimatorListener
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
@@ -21,6 +20,7 @@ import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.util.DisplayMetrics
 import android.util.Log
+import android.view.Display
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -30,15 +30,25 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Button
 import android.widget.FrameLayout
+import androidx.annotation.RequiresApi
 import com.example.accessibilityverifier.ScreenshotService.Companion.ACTION_SCREENSHOT
 import com.example.accessibilityverifier.ScreenshotService.Companion.ACTION_STOP
+import com.example.accessibilityverifier.axemodels.AxeScanner
+import com.example.accessibilityverifier.axemodels.AxeScannerFactory
+import com.example.accessibilityverifier.axemodels.DeviceConfigFactory
+import com.example.accessibilityverifier.axemodels.DisplayMetricsHelper
+import com.example.accessibilityverifier.axemodels.EventBroadCastReceiver
+import com.example.accessibilityverifier.axemodels.MediaProjectionHolder
+import com.example.accessibilityverifier.axemodels.ResultsV2ContainerSerializer
+import com.example.accessibilityverifier.axemodels.ScanException
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import kotlin.concurrent.thread
+import java.io.File
+import java.io.FileOutputStream
 
 
 class MyAccessibilityService : AccessibilityService() {
     var mLayout: FrameLayout? = null
-    private lateinit var tts: TextToSpeech
 
     private var axeScanner: AxeScanner? = null
     //private var atfaScanner: ATFAScanner? = null
@@ -68,7 +78,7 @@ class MyAccessibilityService : AccessibilityService() {
         if (SDK_INT > VERSION_CODES.TIRAMISU) {
             registerReceiver(eventReceiver, eventFilter, RECEIVER_EXPORTED)
         } else {
-            registerReceiver(eventReceiver, eventFilter)
+            registerReceiver(eventReceiver, eventFilter, RECEIVER_EXPORTED)
         }
     }
 
@@ -80,16 +90,19 @@ class MyAccessibilityService : AccessibilityService() {
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onServiceConnected() {
+        /*
         registerEventReceiver()
-        val startScreenshot = Intent(this, ScreenshotActivity::class.java)
-        startScreenshot.addCategory(Intent.CATEGORY_HOME);
-        startScreenshot.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        startActivity(startScreenshot)
+        val intent = Intent(getApplicationContext(), ScreenshotActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        (getApplicationContext()).startActivity(intent)
+        */
+
+        drawUI()
     }
 
     @SuppressLint("ClickableViewAccessibility")
     private fun drawUI() {
-        if (MediaProjectionHolder.resultCode!=0) {
+        //if (MediaProjectionHolder.resultCode!=0) {
             val info = AccessibilityServiceInfo()
             info.eventTypes = AccessibilityEvent.TYPES_ALL_MASK
             info.feedbackType = AccessibilityEvent.TYPES_ALL_MASK
@@ -164,7 +177,7 @@ class MyAccessibilityService : AccessibilityService() {
                 }
             })
             configureBtn()
-        }
+        //}
     }
 
     private fun configureBtn() {
@@ -174,7 +187,7 @@ class MyAccessibilityService : AccessibilityService() {
         btnScan?.setOnClickListener {
             animateButtonBackground(btnScan)
             val risultato = doFullScan(getRootInActiveWindow())
-            //Log.d("XDEBUG Axe ",doFullScan(getRootInActiveWindow()))
+            Repository.sendAxeResultTest(risultato)
         }
 
         btnScreenShot?.setOnClickListener {
@@ -225,8 +238,17 @@ class MyAccessibilityService : AccessibilityService() {
             BitmapImage(screenshot)
         )
        */
-        val resultsV2ContainerSerializer = ResultsV2ContainerSerializer(GsonBuilder())
-        return resultsV2ContainerSerializer.createResultsJson(axeResult)
+        val gson = Gson()
+        val json = gson.toJson(axeResult)
+
+        val regex = "\"\"".toRegex()
+        val newString = json.replace(regex, "'")
+
+        Log.d("XDEBUG", newString)
+
+        //val resultsV2ContainerSerializer = ResultsV2ContainerSerializer(GsonBuilder())
+        //return resultsV2ContainerSerializer.createResultsJson(axeResult)
+        return newString
 
     }
 
@@ -255,7 +277,7 @@ class MyAccessibilityService : AccessibilityService() {
             button.backgroundTintList = colorStateList
         }
 
-        toDarkGreyAnimator.addListener(object : AnimatorListener {
+        toDarkGreyAnimator.addListener(object : Animator.AnimatorListener {
             override fun onAnimationStart(animation: Animator) {
             }
             override fun onAnimationEnd(animation: Animator) {
@@ -267,6 +289,36 @@ class MyAccessibilityService : AccessibilityService() {
             }
         })
         toDarkGreyAnimator.start()
+    }
+
+    @RequiresApi(VERSION_CODES.R)
+    fun takeScreenshot() {
+        takeScreenshot(
+            Display.DEFAULT_DISPLAY,
+            applicationContext.mainExecutor,
+            object : TakeScreenshotCallback {
+                override fun onSuccess(screenshotResult: ScreenshotResult) {
+                    //TODO("Not yet implemented")
+                    val bitmap = Bitmap.wrapHardwareBuffer(screenshotResult.hardwareBuffer, screenshotResult.colorSpace)
+                    //AccessibilityUtils.saveImage(bitmap, applicationContext, "WhatsappIntegration")
+                    // Save the bitmap to a file
+                    val filename = "provafile.png" //"${System.currentTimeMillis()}.png"
+                    val file = File(filesDir, filename)
+                    try {
+                        val out = FileOutputStream(file)
+                        bitmap?.compress(Bitmap.CompressFormat.PNG, 100, out)
+                        out.flush()
+                        out.close()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+
+                override fun onFailure(errorCode: Int) {
+                    TODO("Not yet implemented")
+                }
+            }
+        )
     }
 
     companion object {

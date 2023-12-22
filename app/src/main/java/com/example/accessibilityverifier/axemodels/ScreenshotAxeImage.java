@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-package com.example.accessibilityverifier;
+package com.example.accessibilityverifier.axemodels;
 
 import android.graphics.Bitmap;
 import android.util.Base64;
@@ -9,6 +9,7 @@ import android.util.Base64;
 import com.deque.axe.android.colorcontrast.AxeColor;
 import com.deque.axe.android.colorcontrast.AxeImage;
 import com.deque.axe.android.wrappers.AxeRect;
+import com.example.accessibilityverifier.axemodels.ByteArrayOutputStreamProvider;
 
 import java.io.ByteArrayOutputStream;
 

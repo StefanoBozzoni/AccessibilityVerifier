@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.START_ACTIVITY" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
 
@@ -15,7 +18,7 @@
         android:theme="@style/Theme.AccessibilityVerifier"
         tools:targetApi="31" /-->
 
-    <application android:icon="@mipmap/ic_launcher">
+    <application android:icon="@mipmap/ic_launcher" android:usesCleartextTraffic="true">
 
         <service
             android:name=".MyAccessibilityService"
@@ -34,9 +37,12 @@
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
 
-        <activity android:name=".ScreenshotActivity" android:exported="false"/>
+        <activity android:name=".ScreenshotActivity"
+            android:excludeFromRecents="true"
+            android:exported="false">
+        </activity>
 
-        <receiver android:name=".EventBroadCastReceiver" android:exported="false" />
+        <receiver android:name=".axemodels.EventBroadCastReceiver" android:exported="false" />
 
 
     </application>

@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-package com.example.accessibilityverifier;
+package com.example.accessibilityverifier.axemodels;
 
 import com.deque.axe.android.utils.JsonSerializable;
 

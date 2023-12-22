@@ -5,6 +5,7 @@ import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.util.Log
+import com.example.accessibilityverifier.axemodels.MediaProjectionHolder
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.

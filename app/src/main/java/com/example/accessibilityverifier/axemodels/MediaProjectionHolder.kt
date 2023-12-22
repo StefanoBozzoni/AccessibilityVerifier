@@ -1,4 +1,4 @@
-package com.example.accessibilityverifier
+package com.example.accessibilityverifier.axemodels
 
 import android.content.Context
 import android.content.Intent

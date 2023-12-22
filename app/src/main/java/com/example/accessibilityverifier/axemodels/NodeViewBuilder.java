@@ -1,13 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-package com.example.accessibilityverifier;
+package com.example.accessibilityverifier.axemodels;
 
 import android.graphics.Rect;
 import android.view.accessibility.AccessibilityNodeInfo;
 
 import com.deque.axe.android.AxeView;
 import com.deque.axe.android.wrappers.AxeRect;
+import com.example.accessibilityverifier.axemodels.AxeRectProvider;
 
 import java.util.List;
 
