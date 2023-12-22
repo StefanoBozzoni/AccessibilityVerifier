@@ -17,7 +17,6 @@ import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES
 import android.os.Handler
 import android.os.Looper
-import android.speech.tts.TextToSpeech
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Display
@@ -39,10 +38,9 @@ import com.example.accessibilityverifier.axemodels.DeviceConfigFactory
 import com.example.accessibilityverifier.axemodels.DisplayMetricsHelper
 import com.example.accessibilityverifier.axemodels.EventBroadCastReceiver
 import com.example.accessibilityverifier.axemodels.MediaProjectionHolder
-import com.example.accessibilityverifier.axemodels.ResultsV2ContainerSerializer
 import com.example.accessibilityverifier.axemodels.ScanException
+import com.example.accessibilityverifier.data.Repository
 import com.google.gson.Gson
-import com.google.gson.GsonBuilder
 import java.io.File
 import java.io.FileOutputStream
 
