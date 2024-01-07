@@ -24,27 +24,22 @@
     android:focusableInTouchMode="true"
     android:layout_height="wrap_content">
 
-    <Button
-        android:id="@+id/power"
-        android:text="@string/power"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAllCaps="false"
-        android:visibility="gone"
-        style="?android:attr/buttonBarButtonStyle" />
-    <Button
+
+    <ImageView
         android:id="@+id/btnScan"
         android:text="@string/scanstr"
+        android:src="@drawable/selector_background"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:backgroundTint="@color/button_normal_color"
-        android:textAllCaps="false"/>
+        android:importantForAccessibility="no" />
+
     <Button
         android:id="@+id/btnScreenshot"
         android:text="@string/snapshotstr"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:backgroundTint="@color/button_normal_color"
+        android:visibility="gone"
         android:textAllCaps="false" />
 
 </LinearLayout>

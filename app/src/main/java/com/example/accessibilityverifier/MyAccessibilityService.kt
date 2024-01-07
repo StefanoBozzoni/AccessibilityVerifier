@@ -2,22 +2,13 @@ package com.example.accessibilityverifier
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
-import android.animation.Animator
-import android.animation.ArgbEvaluator
-import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
-import android.content.res.ColorStateList
 import android.graphics.Bitmap
-import android.graphics.Color
 import android.graphics.PixelFormat
-import android.os.Build.VERSION
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES
-import android.os.Handler
-import android.os.Looper
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Display
@@ -28,61 +19,43 @@ import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import android.webkit.PermissionRequest
-import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.core.app.ActivityCompat
-import androidx.core.app.ActivityCompat.requestPermissions
-import com.example.accessibilityverifier.ScreenshotService.Companion.ACTION_SCREENSHOT
-import com.example.accessibilityverifier.ScreenshotService.Companion.ACTION_STOP
 import com.example.accessibilityverifier.axemodels.AxeScanner
 import com.example.accessibilityverifier.axemodels.AxeScannerFactory
 import com.example.accessibilityverifier.axemodels.DeviceConfigFactory
 import com.example.accessibilityverifier.axemodels.DisplayMetricsHelper
 import com.example.accessibilityverifier.axemodels.EventBroadCastReceiver
-import com.example.accessibilityverifier.axemodels.MediaProjectionHolder
+import com.example.accessibilityverifier.axemodels.ResultsV2ContainerSerializer
 import com.example.accessibilityverifier.axemodels.ScanException
 import com.example.accessibilityverifier.data.Repository
-import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asExecutor
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-
+import java.util.concurrent.Executor
+import kotlin.coroutines.ContinuationInterceptor
+import kotlin.coroutines.coroutineContext
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 class MyAccessibilityService : AccessibilityService() {
     var mLayout: FrameLayout? = null
+    var mWaitingPageLayout: FrameLayout? = null
 
     private var axeScanner: AxeScanner? = null
-    //private var atfaScanner: ATFAScanner? = null
     private var deviceConfigFactory: DeviceConfigFactory? = null
-
-    private val eventReceiver = object : EventBroadCastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == drawUiEvent) {
-                if (intent.getBooleanExtra("exit", true) == false) {
-                    drawUI()
-                } else {
-                    stopSelf()
-                }
-            }
-            if (intent?.action == screenshotDone) {
-                mLayout?.visibility = View.VISIBLE
-            }
-
-        }
-    }
-
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
-    private fun registerEventReceiver() {
-        val eventFilter = IntentFilter()
-        eventFilter.addAction(drawUiEvent)
-        eventFilter.addAction(screenshotDone)
-        if (SDK_INT > VERSION_CODES.TIRAMISU) {
-            registerReceiver(eventReceiver, eventFilter, RECEIVER_EXPORTED)
-        } else {
-            registerReceiver(eventReceiver, eventFilter, RECEIVER_EXPORTED)
-        }
-    }
+    private lateinit var btnScan: ImageView
+    private var movingBar: Boolean = false
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     init {
         deviceConfigFactory = DeviceConfigFactory()
@@ -92,19 +65,11 @@ class MyAccessibilityService : AccessibilityService() {
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onServiceConnected() {
-        /*
-        registerEventReceiver()
-        val intent = Intent(getApplicationContext(), ScreenshotActivity::class.java)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        (getApplicationContext()).startActivity(intent)
-        */
-
         drawUI()
     }
 
     @SuppressLint("ClickableViewAccessibility")
     private fun drawUI() {
-        //if (MediaProjectionHolder.resultCode!=0) {
             val info = AccessibilityServiceInfo()
             info.eventTypes = AccessibilityEvent.TYPES_ALL_MASK
             info.feedbackType = AccessibilityEvent.TYPES_ALL_MASK
@@ -133,14 +98,13 @@ class MyAccessibilityService : AccessibilityService() {
                 PixelFormat.TRANSLUCENT
             )
             params.gravity = Gravity.CENTER
-            val btnScan = mLayout?.findViewById<Button>(R.id.btnScan)
+            btnScan = mLayout!!.findViewById(R.id.btnScan)
 
             val windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
-            btnScan?.setOnTouchListener(object : View.OnTouchListener {
+            btnScan.setOnTouchListener(object : View.OnTouchListener {
                 private var initialX: Int = 0
                 private var initialY: Int = 0
-                private var moved: Boolean = false
                 private var initialTouchX: Float = 0.toFloat()
                 private var initialTouchY: Float = 0.toFloat()
 
@@ -151,66 +115,57 @@ class MyAccessibilityService : AccessibilityService() {
                             initialY = params.y
                             initialTouchX = event.rawX
                             initialTouchY = event.rawY
-                            moved = false
+                            movingBar = false
                             return true
                         }
 
                         MotionEvent.ACTION_MOVE -> {
+                            movingBar = true
+                            btnScan.setImageResource(R.drawable.accessibility_icon3);
                             params.x = initialX + (event.rawX - initialTouchX).toInt()
                             params.y = initialY + (event.rawY - initialTouchY).toInt()
                             windowManager.updateViewLayout(mLayout, params)
-                            moved = true
                             return true
                         }
 
                         MotionEvent.ACTION_UP -> {
                             // Perform a click action when the touch is released
-                            if (!moved) {
-                                v.post {
-                                    v.performClick()
+
+                            if (!movingBar) {
+                                Toast.makeText(btnScan.context, "Invio dati in corso...", Toast.LENGTH_SHORT).show()
+                                btnScan.setImageResource(R.drawable.hourglass)
+                                serviceScope.launch {
+                                    val scrShotBitmap = if (SDK_INT>30) {
+                                        withContext(Dispatchers.Main) {
+                                            mLayout?.visibility = View.INVISIBLE
+                                        }
+                                        prepareScreenshotBitmap()
+                                    } else null
+
+                                    withContext(Dispatchers.Main) {
+                                        mLayout?.visibility = View.VISIBLE
+                                    }
+
+                                    val risultato = doFullScan(getRootInActiveWindow(), scrShotBitmap)
+
+                                    Repository.sendAxeResultAccessibilityCheck(risultato)
+                                    withContext(Dispatchers.Main) {
+                                        btnScan.setImageResource(R.drawable.accessibility_icon3)
+                                    }
                                 }
+
                                 return false
-                            } else
+                            } else {
+                                btnScan.setImageResource(R.drawable.accessibility_icon3)
                                 return true
+                            }
+
                         }
 
                         else -> return false
                     }
                 }
             })
-            configureBtn()
-        //}
-    }
-
-    private fun configureBtn() {
-        val btnScan = mLayout?.findViewById<Button>(R.id.btnScan)
-        val btnScreenShot = mLayout?.findViewById<Button>(R.id.btnScreenshot)
-
-        btnScan?.setOnClickListener {
-            animateButtonBackground(btnScan)
-            val risultato = doFullScan(getRootInActiveWindow())
-            Repository.sendAxeResultTest(risultato)
-        }
-
-        btnScreenShot?.setOnClickListener {
-            if (SDK_INT>=30) {
-                takeScreenshot()
-            }
-            /*
-            mLayout?.visibility = View.GONE
-            if (MediaProjectionHolder.get() == null) {
-                val intent = Intent(this, ScreenshotService::class.java)
-                intent.action = ACTION_SCREENSHOT
-                startService(intent)
-            } else {
-                Handler(Looper.getMainLooper()).postDelayed(
-                    {
-                    ScreenshotService.imageProcessed = false
-                    }, 40)
-            }
-             */
-        }
-
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -225,9 +180,6 @@ class MyAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         Log.d("XDEBUG","destroy accessibility service")
-        unregisterReceiver(eventReceiver)
-        val intent = Intent(this,ScreenshotService::class.java).apply { action = ACTION_STOP }
-        startService(intent)
         super.onDestroy()
     }
 
@@ -237,79 +189,37 @@ class MyAccessibilityService : AccessibilityService() {
         return DisplayMetricsHelper.getRealDisplayMetrics(this)
     }
 
-    private fun doFullScan( rootNode: AccessibilityNodeInfo): String {
-        val screenShot: Bitmap? = null
+    private fun doFullScan( rootNode: AccessibilityNodeInfo, screenShot: Bitmap? = null): String {
         val axeResult = axeScanner!!.scanWithAxe(rootNode, screenShot) ?: throw ScanException("Scanner returned no data")
-        /* Scansione con Android Testing Framework
-        val atfaResults: List<AccessibilityHierarchyCheckResult> = atfaScanner!!.scanWithATFA(rootNode,
-            BitmapImage(screenshot)
-        )
-       */
-        val gson = Gson()
-        val json = gson.toJson(axeResult)
-
-        val regex = "\"\"".toRegex()
-        val newString = json.replace(regex, "'")
-
-        Log.d("XDEBUG", newString)
-
-        //val resultsV2ContainerSerializer = ResultsV2ContainerSerializer(GsonBuilder())
-        //return resultsV2ContainerSerializer.createResultsJson(axeResult)
+        val resultsV2ContainerSerializer = ResultsV2ContainerSerializer(GsonBuilder())
+        val newString = resultsV2ContainerSerializer.createResultsJson(axeResult)
         return newString
-
-    }
-
-    fun animateButtonBackground(context: View) {
-        val button: Button = context.findViewById(R.id.btnScan)
-
-        val originalBackgroundColor = button.backgroundTintList?.defaultColor ?: Color.TRANSPARENT
-
-        val darkGreyColor = Color.parseColor("#DDDDDD") // Dark grey color
-
-        val toDarkGreyAnimator = ValueAnimator.ofObject(ArgbEvaluator(), originalBackgroundColor, darkGreyColor)
-        toDarkGreyAnimator.duration = 100
-
-        val toOriginalColorAnimator = ValueAnimator.ofObject(ArgbEvaluator(), darkGreyColor, originalBackgroundColor)
-        toOriginalColorAnimator.duration = 100
-
-        toDarkGreyAnimator.addUpdateListener { valueAnimator ->
-            val color = valueAnimator.animatedValue as Int
-            val colorStateList = ColorStateList.valueOf(color)
-            button.backgroundTintList = colorStateList
-        }
-
-        toOriginalColorAnimator.addUpdateListener { valueAnimator ->
-            val color = valueAnimator.animatedValue as Int
-            val colorStateList = ColorStateList.valueOf(color)
-            button.backgroundTintList = colorStateList
-        }
-
-        toDarkGreyAnimator.addListener(object : Animator.AnimatorListener {
-            override fun onAnimationStart(animation: Animator) {
-            }
-            override fun onAnimationEnd(animation: Animator) {
-                toOriginalColorAnimator.start()
-            }
-            override fun onAnimationCancel(animation: Animator) {
-            }
-            override fun onAnimationRepeat(animation: Animator) {
-            }
-        })
-        toDarkGreyAnimator.start()
     }
 
     @RequiresApi(VERSION_CODES.R)
-    fun takeScreenshot() {
+    suspend fun prepareScreenshotBitmap(): Bitmap? {
+        val dispatcher: CoroutineDispatcher = coroutineContext[ContinuationInterceptor] as CoroutineDispatcher
+        val executor = dispatcher.asExecutor()
+        val result = suspendCoroutine{ continuation ->
+            takeMyScreenshot(
+                 executor,
+                 onSuccess = { bitmap -> continuation.resumeWith(Result.success(bitmap))},
+                 onError = {exception -> continuation.resumeWithException(exception)}
+            )
+        }
+        return result
+    }
 
-        mLayout?.visibility = View.GONE
+    @RequiresApi(VERSION_CODES.R)
+    fun takeMyScreenshot(executor: Executor, onSuccess: (bitmap: Bitmap?) -> Unit, onError: (e:Exception) -> Unit) {
         takeScreenshot(
             Display.DEFAULT_DISPLAY,
-            applicationContext.mainExecutor,
+            executor,
             object : TakeScreenshotCallback {
                 override fun onSuccess(screenshotResult: ScreenshotResult) {
-                    //TODO("Not yet implemented")
                     val bitmap = Bitmap.wrapHardwareBuffer(screenshotResult.hardwareBuffer, screenshotResult.colorSpace)
-                    //AccessibilityUtils.saveImage(bitmap, applicationContext, "WhatsappIntegration")
+                    onSuccess.invoke(bitmap)
+                    /*
                     // Save the bitmap to a file
                     val filename = "provafile.png" //"${System.currentTimeMillis()}.png"
                     val file = File(filesDir, filename)
@@ -319,23 +229,20 @@ class MyAccessibilityService : AccessibilityService() {
                         out.flush()
                         out.close()
                         Log.d("XDEBUG", "bitmap saved")
-                        mLayout?.visibility = View.VISIBLE
+                        onSuccess.invoke(bitmap)
                     } catch (e: Exception) {
                         e.printStackTrace()
+                        onError.invoke(e)
                     }
+                     */
                 }
 
                 override fun onFailure(errorCode: Int) {
                     Log.d("XDEBUG", "failed on takeScreenshot, errorcode: $errorCode")
-                    mLayout?.visibility = View.VISIBLE
+                    onError.invoke(Exception(errorCode.toString()))
                 }
             }
         )
-    }
-
-    companion object {
-        const val drawUiEvent    = "com.example.accessibilityverifier.displayUi"
-        const val screenshotDone = "com.example.accessibilityverifier.screenShotDone"
     }
 
 }

@@ -35,35 +35,6 @@ class ScreenshotService : Service() {
         mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent == null) {
-            return START_NOT_STICKY
-        }
-
-        if (intent.action == ACTION_SCREENSHOT) {
-            setForegroundService()
-            //val resultCode = intent.getIntExtra("code", 0)
-            //val resultData: Intent? = intent.getParcelableExtra("data")
-            if (MediaProjectionHolder.get() == null) {
-                MediaProjectionHolder.instantiateProjection(this)
-            }
-            mediaProjection = MediaProjectionHolder.get()
-            //mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, resultData!!)
-            startScreenShotCapture(mediaProjection)
-        }
-
-        if (intent.action == ACTION_STOP) {
-            stopForeground(STOP_FOREGROUND_REMOVE) //remove the notificaiton and stop the service
-            stopSelf()  //will not be restarted automatically by the system
-        }
-
-        return START_NOT_STICKY
-    }
-
-    fun getProjection(): MediaProjection? {
-        return mediaProjection
-    }
-
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
@@ -85,70 +56,6 @@ class ScreenshotService : Service() {
         }
         //set the service as foreground
         startForeground(NOTIFICATION_ID, notification)
-    }
-
-    private fun startScreenShotCapture(projection: MediaProjection?) {
-
-        val window = getSystemService(WINDOW_SERVICE) as WindowManager
-        val display = window.getDefaultDisplay()  //this.display
-        val displayMetrics = Resources.getSystem().displayMetrics // Default values
-        display.getRealMetrics(displayMetrics)
-        val mImageReader = ImageReader.newInstance(displayMetrics.widthPixels, displayMetrics.heightPixels, PixelFormat.RGBA_8888, 2)
-
-        val handlerThread = HandlerThread("MyHandlerThread")
-        handlerThread.start()
-
-        projection?.registerCallback(
-            object : MediaProjection.Callback() {
-                override fun onStop() {
-                    super.onStop()
-                }
-                override fun onCapturedContentResize(width: Int, height: Int) {
-                    super.onCapturedContentResize(width, height)
-                }
-                override fun onCapturedContentVisibilityChanged(isVisible: Boolean) {
-                    super.onCapturedContentVisibilityChanged(isVisible)
-                }
-            }
-            , Handler(handlerThread.looper))
-
-        projection?.createVirtualDisplay(
-            "ScreenCapture",
-            displayMetrics.widthPixels,
-            displayMetrics.heightPixels,
-            displayMetrics.densityDpi,
-            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-            mImageReader.getSurface(),
-            null,
-            null
-        )
-
-        val lock = Any()
-        mImageReader.setOnImageAvailableListener(
-            { reader ->
-                    synchronized(lock) {
-                        val image = reader.acquireLatestImage()
-                        if (image != null && !imageProcessed) {
-                            Log.d("XDEBUG", "Inside image reader writing function")
-                            val bitmap = Bitmap.createBitmap(image.width, image.height, Bitmap.Config.ARGB_8888)
-                            bitmap.copyPixelsFromBuffer(image.getPlanes()[0].getBuffer())
-                            image.close()
-                            val fileOutputStream = BufferedOutputStream(FileOutputStream(File(filesDir, "screenshot.png")))
-                            bitmap.compress(Bitmap.CompressFormat.PNG, 100, fileOutputStream)
-                            fileOutputStream.flush()
-                            fileOutputStream.close()
-                            Log.d("XDEBUG", "Scrittura bitmap")
-                            imageProcessed = true
-                            this.sendBroadcast(Intent(MyAccessibilityService.screenshotDone))
-                        } else {
-                            if (image != null) {
-                                image.close()
-                            }
-                        }
-                    }
-            },
-            Handler(handlerThread.looper)
-        )
     }
 
     override fun onDestroy() {

@@ -1,8 +1,11 @@
 <accessibility-service
     xmlns:android="http://schemas.android.com/apk/res/android"
+    android:label="AudioText Verifier"
     android:accessibilityEventTypes="typeAllMask"
     android:accessibilityFeedbackType="feedbackAllMask"
     android:notificationTimeout="1"
-    android:canTakeScreenshot="true"
     android:canPerformGestures="true"
-    android:canRetrieveWindowContent="true" />
+    android:canRetrieveWindowContent="true"
+    android:description="@string/info_service_short"
+    android:settingsActivity="com.example.accessibilityverifier.SettingsActivity"
+    android:canTakeScreenshot="true"/>

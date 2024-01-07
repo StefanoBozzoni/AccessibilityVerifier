@@ -1,50 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.START_ACTIVITY" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
 
-    <!--application
-        android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
+    <application
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.AccessibilityVerifier"
-        tools:targetApi="31" /-->
-
-    <application android:icon="@mipmap/ic_launcher" android:usesCleartextTraffic="true">
-
+        android:usesCleartextTraffic="true">
         <service
             android:name=".MyAccessibilityService"
-            android:exported="true"
+            android:label="Accessibility verifier"
+            android:exported="false"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
+
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/service_config" />
         </service>
-
         <service
             android:name=".ScreenshotService"
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
 
-        <activity android:name=".ScreenshotActivity"
+        <activity
+            android:name=".ScreenshotActivity"
             android:excludeFromRecents="true"
-            android:exported="false">
+            android:exported="false"/>
+
+        <activity
+            android:name=".SettingsActivity"
+            android:label="Configurazione servizio"
+            android:configChanges="orientation|screenSize|keyboardHidden">
         </activity>
 
-        <receiver android:name=".axemodels.EventBroadCastReceiver" android:exported="false" />
-
-
+        <receiver
+            android:name=".axemodels.EventBroadCastReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>
